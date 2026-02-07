@@ -110,3 +110,197 @@ To see if e.g. your filter lists are valid without actually changing anything in
 ## License
 
 MIT License. See `LICENSE` for more information.
+
+Sourav's notes
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TheWebDexter Tech Protection Setup Guide</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; line-height: 1.6; color: #24292e; max-width: 900px; margin: 0 auto; padding: 20px; }
+        h1 { border-bottom: 1px solid #eaecef; padding-bottom: 0.3em; margin-bottom: 24px; }
+        h2 { margin-top: 24px; margin-bottom: 16px; font-weight: 600; line-height: 1.25; border-bottom: 1px solid #eaecef; padding-bottom: 0.3em; }
+        h3 { margin-top: 24px; margin-bottom: 16px; font-weight: 600; font-size: 1.25em; }
+        code { padding: 0.2em 0.4em; margin: 0; font-size: 85%; background-color: #f6f8fa; border-radius: 6px; font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace; }
+        pre { background-color: #f6f8fa; padding: 16px; overflow: auto; line-height: 1.45; border-radius: 6px; }
+        pre code { background-color: transparent; padding: 0; }
+        .warning { background-color: #fff8c5; padding: 16px; border-left: 5px solid #e36209; margin-bottom: 16px; }
+        .note { background-color: #f1f8ff; padding: 16px; border-left: 5px solid #0366d6; margin-bottom: 16px; }
+        table { border-collapse: collapse; width: 100%; margin-bottom: 16px; }
+        table th, table td { border: 1px solid #dfe2e5; padding: 6px 13px; }
+        table tr:nth-child(2n) { background-color: #f6f8fa; }
+        a { color: #0366d6; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+
+<h1>🚀 TheWebDexter Tech Protection List: Deployment Guide</h1>
+<p>This guide details how to deploy a custom, high-performance ad-blocking and security filter (300,000+ domains) to Cloudflare Gateway using GitHub Actions.</p>
+
+<div class="note">
+    <strong>Goal:</strong> Automate the blocking of ads, trackers, malware, and gambling sites for corporate/startup environments using a single consolidated list named <em>"TheWebDexter Tech Protection List"</em>.
+</div>
+
+<h2>Step 1: Prerequisites</h2>
+<ul>
+    <li>A <strong>GitHub Account</strong>.</li>
+    <li>A <strong>Cloudflare Account</strong> (Free Zero Trust plan).</li>
+</ul>
+
+<h2>Step 2: Cloudflare Configuration</h2>
+<p>You need to retrieve two credentials from your Cloudflare Zero Trust Dashboard.</p>
+
+<h3>1. Get Account ID</h3>
+<ol>
+    <li>Log in to the <a href="https://one.dash.cloudflare.com/" target="_blank">Cloudflare Zero Trust Dashboard</a>.</li>
+    <li>Copy your <strong>Account ID</strong> from the URL bar (the string immediately after <code>dash.cloudflare.com/</code>).</li>
+    <li><em>Example:</em> <code>191b417c62b998c8963b4abf52917d36</code></li>
+</ol>
+
+<h3>2. Create API Token</h3>
+<ol>
+    <li>Go to <a href="https://dash.cloudflare.com/profile/api-tokens" target="_blank">User API Tokens</a>.</li>
+    <li>Click <strong>Create Token</strong> &rarr; <strong>Custom Token</strong>.</li>
+    <li><strong>Permissions:</strong> Account &rarr; Zero Trust &rarr; Edit.</li>
+    <li><strong>Account Resources:</strong> Include &rarr; <strong>All accounts</strong>.</li>
+    <li>Click <strong>Create Token</strong> and copy the secret key.</li>
+</ol>
+
+<h2>Step 3: GitHub Repository Setup</h2>
+<div class="warning">
+    <strong>CRITICAL:</strong> You must distinguish between <strong>Secrets</strong> (hidden credentials) and <strong>Variables</strong> (configuration settings). Placing these in the wrong tab will cause the deployment to fail.
+</div>
+
+<h3>1. Add Secrets (Credentials)</h3>
+<p>Go to <strong>Settings</strong> &rarr; <strong>Secrets and variables</strong> &rarr; <strong>Actions</strong> &rarr; <strong>Secrets</strong> tab.</p>
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Value</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><code>CLOUDFLARE_ACCOUNT_ID</code></td>
+            <td>(Your Account ID from Step 2.1)</td>
+        </tr>
+        <tr>
+            <td><code>CLOUDFLARE_API_TOKEN</code></td>
+            <td>(Your API Token from Step 2.2)</td>
+        </tr>
+    </tbody>
+</table>
+
+<h3>2. Add Variables (Configuration)</h3>
+<p>Go to <strong>Settings</strong> &rarr; <strong>Secrets and variables</strong> &rarr; <strong>Actions</strong> &rarr; <strong>Variables</strong> tab.</p>
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Value</th>
+            <th>Description</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><code>CLOUDFLARE_LIST_ITEM_LIMIT</code></td>
+            <td><code>300000</code></td>
+            <td><strong>Required.</strong> Forces the script to create 1 single list instead of 300 chunks.</td>
+        </tr>
+        <tr>
+            <td><code>BLOCKLIST_URLS</code></td>
+            <td>(See below)</td>
+            <td>List of blocklist source URLs.</td>
+        </tr>
+        <tr>
+            <td><code>ALLOWLIST_URLS</code></td>
+            <td><code>https://raw.githubusercontent.com/anudeepND/whitelist/master/domains/whitelist.txt</code></td>
+            <td>Prevents breaking popular services.</td>
+        </tr>
+    </tbody>
+</table>
+
+<h4>Recommended Blocklists (Paste into BLOCKLIST_URLS)</h4>
+<pre><code>https://raw.githubusercontent.com/hagezi/dns-blocklists/main/domains/pro.txt
+https://raw.githubusercontent.com/hagezi/dns-blocklists/main/domains/tif.txt
+https://raw.githubusercontent.com/hagezi/dns-blocklists/main/domains/gambling.txt
+https://raw.githubusercontent.com/hagezi/dns-blocklists/main/domains/doh-vpn-proxy-bypass.txt</code></pre>
+
+<h2>Step 4: Create the Deployment Workflow</h2>
+<p>Create a file in your repository at <code>.github/workflows/update_lists.yml</code> with the following content. This script includes a special step to rename the list to <strong>"TheWebDexter Tech Protection List"</strong>.</p>
+
+<pre><code>name: Update Filter Lists
+
+on:
+  schedule:
+    - cron: '0 3 * * 1' # Runs every Monday at 3:00 AM
+  workflow_dispatch:    # Allows manual triggering
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/update_lists.yml'
+
+jobs:
+  cgps:
+    name: Update Cloudflare Gateway
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Dependencies
+        run: npm ci
+
+      # --- CUSTOM NAME CONFIGURATION ---
+      - name: Set Custom List Name
+        run: |
+          grep -rl "CGPS List" . | xargs sed -i 's/CGPS List/TheWebDexter Tech Protection List/g'
+          grep -rl "CGPS" . | xargs sed -i 's/CGPS/TheWebDexter/g'
+
+      - name: Download Lists
+        run: npm run download:blocklist
+        env:
+          BLOCKLIST_URLS: ${{ vars.BLOCKLIST_URLS }}
+
+      - name: Download Allowlists
+        run: npm run download:allowlist
+        env:
+          ALLOWLIST_URLS: ${{ vars.ALLOWLIST_URLS }}
+
+      - name: Update Cloudflare
+        run: npm run cloudflare-create
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_LIST_ITEM_LIMIT: ${{ vars.CLOUDFLARE_LIST_ITEM_LIMIT }}</code></pre>
+
+<h2>Step 5: Run & Verify</h2>
+<ol>
+    <li>Go to the <strong>Actions</strong> tab in GitHub.</li>
+    <li>Select <strong>Update Filter Lists</strong> on the left.</li>
+    <li>Click <strong>Run workflow</strong>.</li>
+    <li>Wait for the green checkmark.</li>
+    <li><strong>Success Check:</strong> Log in to Cloudflare > <strong>My Team</strong> > <strong>Lists</strong>. You should see a single list named: <br>
+    <code>TheWebDexter Tech Protection List - Chunk 1</code> containing ~300,000 domains.</li>
+</ol>
+
+<h2>Step 6: Connect Devices</h2>
+<p>To use the protection, configure your devices or router to use your Cloudflare Gateway DNS location.</p>
+<ul>
+    <li><strong>Windows/Mac:</strong> Install the Cloudflare WARP Client and sign in to your Zero Trust team.</li>
+    <li><strong>Routers/Browsers:</strong> Use the dedicated <strong>DNS over HTTPS (DoH)</strong> URL found in Cloudflare under <em>Gateway &rarr; DNS Locations</em>.</li>
+</ul>
+
+</body>
+</html>
