@@ -1,7 +1,7 @@
 name: Force Delete All Lists
 
 on:
-  workflow_dispatch: # This allows you to trigger it manually
+  workflow_dispatch:
 
 jobs:
   delete_everything:
@@ -24,3 +24,4 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CGPS_DELETION_ENABLED: true  # <--- THIS IS THE UNLOCK KEY
