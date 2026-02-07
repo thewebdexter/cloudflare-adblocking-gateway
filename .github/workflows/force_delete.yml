@@ -1,27 +1,36 @@
-name: Force Delete All Lists
+name: Nuclear Cleanup (Corrected)
 
 on:
   workflow_dispatch:
 
 jobs:
-  delete_everything:
-    name: Delete Cloudflare Lists
+  nuke:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: Install Dependencies
-        run: npm ci
-
-      - name: Run Delete Script
-        run: npm run cloudflare-delete
+      - name: Delete LLGP Lists
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CGPS_DELETION_ENABLED: true  # <--- THIS IS THE UNLOCK KEY
+          CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          echo "Fetching all lists..."
+          
+          # 1. Fetch all lists from Cloudflare
+          LISTS=$(curl -s -X GET "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/gateway/lists" \
+            -H "Authorization: Bearer $CF_API_TOKEN" \
+            -H "Content-Type: application/json")
+
+          # 2. Filter for lists starting with "LLGP List" AND "CGPS List" (just in case)
+          IDS=$(echo "$LISTS" | jq -r '.result[] | select(.name | startswith("LLGP List") or startswith("CGPS List")) | .id')
+
+          if [ -z "$IDS" ]; then
+            echo "No lists found to delete!"
+            exit 0
+          fi
+
+          # 3. Loop through and delete them
+          echo "$IDS" | while read -r LIST_ID; do
+            echo "Deleting List ID: $LIST_ID"
+            curl -s -X DELETE "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/gateway/lists/$LIST_ID" \
+              -H "Authorization: Bearer $CF_API_TOKEN" \
+              -H "Content-Type: application/json"
+          done
